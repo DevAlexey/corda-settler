@@ -22,7 +22,7 @@ import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-class SWIFTClient(
+open class SWIFTClient(
         private val apiUrl : String,
         private val apiKey : String,
         private val privateKey : PrivateKey,
@@ -34,7 +34,7 @@ class SWIFTClient(
     /**
      * Submits a payment to the SWIFT gateway
      */
-    fun makePayment(e2eId : String,
+    open fun makePayment(e2eId : String,
                     executionDate : Date,
                     amount: Amount<TokenType>,
                     debtorName : String,
@@ -196,7 +196,7 @@ class SWIFTClient(
     /**
      * Fetches SWIFT payment status
      */
-    fun getPaymentStatus(uetr : String) : SWIFTPaymentStatus {
+    open fun getPaymentStatus(uetr : String) : SWIFTPaymentStatus {
         val checkStatusUrl = "$apiUrl/payment_initiation/$uetr/tracker_status"
 
         SWIFTClient.logger.info(messageWithParams("Getting payment status", "UETR" to uetr))
@@ -222,7 +222,7 @@ class SWIFTClient(
     /**
      * TODO: This method should be eventually removed. This API is open for testing only.
      */
-    fun updatePaymentStatus(uetr : String, status : SWIFTPaymentStatusType) {
+    open fun updatePaymentStatus(uetr : String, status : SWIFTPaymentStatusType) {
         val checkStatusUrl = "$apiUrl/payment_initiation/$uetr/tracker_status?newstatus=$status"
 
         SWIFTClient.logger.info(messageWithParams("Updating payment status.", "UETR" to uetr))

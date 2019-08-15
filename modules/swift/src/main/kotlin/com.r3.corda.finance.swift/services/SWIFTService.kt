@@ -20,9 +20,15 @@ import java.util.*
 @CordaService
 class SWIFTService(val appServiceHub : AppServiceHub) : SingletonSerializeAsToken() {
     companion object {
+        private fun getFile(fileName:String):File{
+            val file = Paths.get("cordapps").resolve("config").resolve(fileName).toFile()
+            return if (file.exists()) file
+            else File(SWIFTClient::class.java.classLoader.getResource(fileName).toURI())
+        }
+
         // TODO: this should be driven by configuration parameter
         fun privateKey() : PrivateKey {
-            val fileContents = String(Files.readAllBytes(Paths.get(SWIFTService::class.java.classLoader.getResource("swiftKey.pem").toURI())))
+            val fileContents = String(Files.readAllBytes(Paths.get(getFile("swiftKey.pem").toURI())))
             val decodedContents = Base64.getDecoder().decode(fileContents.replace("\\n".toRegex(), "").replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", ""))
             val keyFactory = KeyFactory.getInstance("RSA")
             val keySpecPKCS8 = PKCS8EncodedKeySpec(decodedContents)
@@ -32,7 +38,7 @@ class SWIFTService(val appServiceHub : AppServiceHub) : SingletonSerializeAsToke
         // TODO: this should be driven by configuration parameter
         fun certificate() : X509Certificate {
             val certFactory = CertificateFactory.getInstance("X.509")
-            val fileContents = String(Files.readAllBytes(Paths.get(SWIFTService::class.java.classLoader.getResource("swiftCert.pem").toURI())))
+            val fileContents = String(Files.readAllBytes(Paths.get(getFile("swiftCert.pem").toURI())))
             val decodedContents = Base64.getDecoder().decode(fileContents.replace(X509Factory.BEGIN_CERT, "").replace(X509Factory.END_CERT, "").replace("\\n".toRegex(), ""))
             return certFactory.generateCertificate(ByteArrayInputStream(decodedContents)) as X509Certificate
         }
@@ -58,15 +64,17 @@ class SWIFTService(val appServiceHub : AppServiceHub) : SingletonSerializeAsToke
     val debtorBicfi : String
         get() = _config.getString("debtorBicfi") ?: throw IllegalArgumentException("debtorBicfi must be provided")
 
+    val swiftMocked: Boolean
+        get() = _config.run { "swiftMocked".let { if (hasPath(it)) getBoolean(it) else false } }
+
     /**
      * Attempts to load service configuration from cordapps/config with a fallback to classpath
      */
     private fun loadConfig() : Config {
-        val fileName = "swift.conf"
-        val defaultLocation = (Paths.get("cordapps").resolve("config").resolve(fileName)).toFile()
-        return if (defaultLocation.exists()) ConfigFactory.parseFile(defaultLocation)
-        else ConfigFactory.parseFile(File(SWIFTClient::class.java.classLoader.getResource(fileName).toURI()))
+        return ConfigFactory.parseFile(getFile("swift.conf"))
     }
 
-    fun swiftClient() = SWIFTClient(apiUrl, apiKey, privateKey(), certificate())
+    fun swiftClient() =
+        if (swiftMocked) SWIFTClientMock(apiUrl, apiKey, privateKey(), certificate())
+        else SWIFTClient(apiUrl, apiKey, privateKey(), certificate())
 }
