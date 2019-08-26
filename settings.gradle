@@ -1,5 +1,6 @@
 include 'cordapp'
 include 'cordapp-contracts-states'
+include 'cordapp-contracts-states-fat'
 include ':modules:ripple'
 include 'oracle'
 include ':modules:swift'
